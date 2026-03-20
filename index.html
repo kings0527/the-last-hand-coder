@@ -19,26 +19,36 @@
         .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         #progress-bar { transition: width 0.3s ease; }
+        .cover-gradient { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+        .glow-text { text-shadow: 0 0 20px rgba(139, 92, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.3); }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+            50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.6); }
+        }
+        .animate-glow { animation: pulse-glow 2s infinite; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- 顶部导航 -->
-    <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+    <header class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur shadow-md z-50">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button onclick="goHome()" class="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="font-semibold">首页</span>
+            </button>
+            <h1 class="text-lg font-bold text-gray-800 truncate max-w-md hidden sm:block">全世界只剩我会古法编程</h1>
             <button onclick="toggleToc()" class="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition">
+                <span class="font-semibold">目录</span>
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
-                <span class="font-semibold">目录</span>
             </button>
-            <h1 class="text-lg font-bold text-gray-800 truncate max-w-md hidden sm:block">全世界只剩我会古法编程</h1>
-            <div class="text-sm text-gray-500">
-                <span id="current-chapter-num">第1章</span> / 共80章
-            </div>
         </div>
         <!-- 进度条 -->
         <div class="h-1 bg-gray-200">
-            <div id="progress-bar" class="h-full bg-blue-500" style="width: 1.25%"></div>
+            <div id="progress-bar" class="h-full bg-blue-500" style="width: 0%"></div>
         </div>
     </header>
 
@@ -46,7 +56,7 @@
     <aside id="toc-sidebar" class="fixed left-0 top-16 bottom-0 w-80 bg-white shadow-xl transform -translate-x-full transition-transform duration-300 z-40 overflow-hidden">
         <div class="p-4 border-b bg-gray-50">
             <h2 class="font-bold text-gray-800">章节目录</h2>
-            <p class="text-xs text-gray-500 mt-1">点击章节开始阅读</p>
+            <p class="text-xs text-gray-500 mt-1">共80章 · 点击开始阅读</p>
         </div>
         <div id="toc-list" class="overflow-y-auto h-full pb-20">
             <!-- 目录项由JS生成 -->
@@ -54,55 +64,135 @@
     </aside>
 
     <!-- 遮罩层 -->
-    <div id="overlay" onclick="toggleToc()" class="fixed inset-0 bg-black/50 z-30 hidden opacity-0 transition-opacity duration-300"></div>
+    <div id="overlay" onclick="closeToc()" class="fixed inset-0 bg-black/50 z-30 hidden opacity-0 transition-opacity duration-300"></div>
 
     <!-- 主内容区 -->
-    <main class="pt-20 pb-32 px-4">
-        <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-6 sm:p-10">
-            <!-- 章节标题 -->
-            <div class="text-center mb-8 pb-6 border-b">
-                <div class="text-sm text-gray-400 mb-2" id="chapter-number">第 1 章</div>
-                <h1 id="chapter-title" class="text-2xl sm:text-3xl font-bold text-gray-900">加载中...</h1>
+    <main class="pt-16">
+        <!-- 封面页 -->
+        <div id="cover-page" class="min-h-screen cover-gradient flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
+            <!-- 装饰背景 -->
+            <div class="absolute inset-0 opacity-20">
+                <div class="absolute top-20 left-10 w-32 h-32 bg-purple-500 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-20 right-10 w-40 h-40 bg-blue-500 rounded-full blur-3xl"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500 rounded-full blur-3xl opacity-30"></div>
             </div>
             
-            <!-- 章节内容 -->
-            <article id="chapter-content" class="chapter-content text-gray-800 text-lg leading-relaxed min-h-[50vh]">
-                <div class="flex items-center justify-center py-20 text-gray-400">
-                    <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    正在加载章节...
+            <!-- 封面内容 -->
+            <div class="relative z-10 max-w-2xl w-full text-center">
+                <!-- 封面图片 -->
+                <div class="mb-8 relative">
+                    <div class="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full"></div>
+                    <img src="cover.jpg" alt="古法编程的神" class="relative mx-auto max-w-md w-full rounded-lg shadow-2xl animate-glow" onerror="this.style.display='none'; document.getElementById('cover-placeholder').style.display='flex';">
+                    <div id="cover-placeholder" class="hidden relative mx-auto max-w-md w-full aspect-[3/4] bg-gradient-to-br from-purple-900 to-blue-900 rounded-lg shadow-2xl items-center justify-center">
+                        <div class="text-center text-white">
+                            <div class="text-6xl mb-4">👁️</div>
+                            <div class="text-2xl font-bold">古法编程的神</div>
+                        </div>
+                    </div>
                 </div>
-            </article>
+                
+                <!-- 书名 -->
+                <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4 glow-text tracking-wider">
+                    全世界只剩我会古法编程
+                </h1>
+                <p class="text-xl text-purple-200 mb-8">硬核科幻 · 程序员逆袭 · 人机共存</p>
+                
+                <!-- 简介 -->
+                <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8 text-left">
+                    <p class="text-gray-100 leading-relaxed text-lg">
+                        全球AI一夜瘫痪，所有程序员集体抓瞎。只有林渊，这个买不起AI会员的"原始人"，靠手写代码成了全公司的救世主。
+                    </p>
+                    <p class="text-gray-100 leading-relaxed text-lg mt-4">
+                        当<span class="text-purple-300 font-semibold">代码之眼</span>觉醒，他看见的不是bug，是真相——大断联不是意外，是阴谋。从城中村单间到人机共存时代的开创者，他用键盘敲出一个新时代。
+                    </p>
+                    <p class="text-center text-purple-200 mt-4 italic">
+                        "这是一段属于手写代码者的传奇。"
+                    </p>
+                </div>
+                
+                <!-- 开始阅读按钮 -->
+                <button onclick="startReading()" class="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xl font-bold rounded-full hover:from-purple-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-purple-500/50">
+                    <span>开始阅读</span>
+                    <svg class="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                    </svg>
+                </button>
+                
+                <!-- 统计信息 -->
+                <div class="flex items-center justify-center gap-8 mt-12 text-gray-300">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white">80</div>
+                        <div class="text-sm">章节</div>
+                    </div>
+                    <div class="w-px h-10 bg-gray-600"></div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white">30万+</div>
+                        <div class="text-sm">字数</div>
+                    </div>
+                    <div class="w-px h-10 bg-gray-600"></div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white">科幻</div>
+                        <div class="text-sm">类型</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 向下滚动提示 -->
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-400 animate-bounce">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+            </div>
+        </div>
 
-            <!-- 底部导航 -->
-            <div class="mt-12 pt-6 border-t flex items-center justify-between gap-4">
-                <button id="prev-btn" onclick="prevChapter()" disabled class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                    <span>上一章</span>
-                </button>
+        <!-- 阅读页面 -->
+        <div id="reader-page" class="hidden min-h-screen pb-32 px-4">
+            <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-6 sm:p-10 mt-6">
+                <!-- 章节标题 -->
+                <div class="text-center mb-8 pb-6 border-b">
+                    <div class="text-sm text-gray-400 mb-2" id="chapter-number">第 1 章</div>
+                    <h1 id="chapter-title" class="text-2xl sm:text-3xl font-bold text-gray-900">加载中...</h1>
+                </div>
                 
-                <button onclick="toggleToc()" class="nav-btn px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                
-                <button id="next-btn" onclick="nextChapter()" class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    <span>下一章</span>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
+                <!-- 章节内容 -->
+                <article id="chapter-content" class="chapter-content text-gray-800 text-lg leading-relaxed min-h-[50vh]">
+                    <div class="flex items-center justify-center py-20 text-gray-400">
+                        <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        正在加载章节...
+                    </div>
+                </article>
+
+                <!-- 底部导航 -->
+                <div class="mt-12 pt-6 border-t flex items-center justify-between gap-4">
+                    <button id="prev-btn" onclick="prevChapter()" disabled class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        <span>上一章</span>
+                    </button>
+                    
+                    <button onclick="toggleToc()" class="nav-btn px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    
+                    <button id="next-btn" onclick="nextChapter()" class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <span>下一章</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </main>
 
     <!-- 底部版权 -->
-    <footer class="text-center py-6 text-gray-400 text-sm">
+    <footer class="text-center py-6 text-gray-400 text-sm bg-gray-900">
         <p>全世界只剩我会古法编程 · 共80章</p>
     </footer>
 
@@ -192,6 +282,7 @@
         ];
 
         let currentChapter = 1;
+        let isReaderMode = false;
 
         // 生成目录
         function generateTOC() {
@@ -205,17 +296,35 @@
             `).join('');
         }
 
+        // 开始阅读
+        function startReading() {
+            const lastRead = localStorage.getItem('lastReadChapter');
+            loadChapter(lastRead ? parseInt(lastRead) : 1);
+        }
+
+        // 返回首页
+        function goHome() {
+            document.getElementById('cover-page').classList.remove('hidden');
+            document.getElementById('reader-page').classList.add('hidden');
+            document.getElementById('progress-bar').style.width = '0%';
+            isReaderMode = false;
+        }
+
         // 加载章节
         async function loadChapter(num) {
             if (num < 1 || num > 80) return;
             
             currentChapter = num;
+            isReaderMode = true;
             const chapter = chapters[num - 1];
+            
+            // 切换页面
+            document.getElementById('cover-page').classList.add('hidden');
+            document.getElementById('reader-page').classList.remove('hidden');
             
             // 更新UI
             document.getElementById('chapter-number').textContent = `第 ${num} 章`;
             document.getElementById('chapter-title').textContent = chapter.title.replace(/^第\d+章\s*/, '');
-            document.getElementById('current-chapter-num').textContent = `第${num}章`;
             document.getElementById('progress-bar').style.width = `${(num / 80) * 100}%`;
             
             // 更新目录高亮
@@ -286,7 +395,6 @@
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.remove('opacity-0'), 10);
-                // 滚动到当前章节
                 setTimeout(() => {
                     const activeItem = document.querySelector('.toc-item.active');
                     if (activeItem) activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -307,6 +415,7 @@
 
         // 键盘导航
         document.addEventListener('keydown', (e) => {
+            if (!isReaderMode) return;
             if (e.key === 'ArrowLeft') prevChapter();
             if (e.key === 'ArrowRight') nextChapter();
             if (e.key === 'Escape') closeToc();
@@ -315,9 +424,6 @@
         // 初始化
         window.onload = () => {
             generateTOC();
-            // 恢复上次阅读进度
-            const lastRead = localStorage.getItem('lastReadChapter');
-            loadChapter(lastRead ? parseInt(lastRead) : 1);
         };
     </script>
 </body>
