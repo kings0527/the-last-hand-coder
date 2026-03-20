@@ -47,18 +47,24 @@
         
         .page-container {
             flex: 1; position: relative; overflow: hidden;
-            padding: 15px 20px;
         }
         
         .page-content {
-            height: 100%; overflow: hidden;
+            position: absolute; inset: 15px 20px;
+            overflow: hidden;
             font-size: 17px; line-height: 1.8;
             text-align: justify;
         }
         
-        .page-content h1 { display: none; }  /* 隐藏markdown中的h1，只用顶部header显示标题 */
-        .page-content h2 { font-size: 17px; font-weight: 600; margin: 18px 0 12px; }
-        .page-content p { text-indent: 2em; margin-bottom: 0.8em; }
+        .page-inner {
+            column-width: calc(100vw - 40px);
+            column-gap: 0;
+            height: 100%;
+        }
+        
+        .page-inner h1 { display: none; }
+        .page-inner h2 { font-size: 17px; font-weight: 600; margin: 18px 0 12px; }
+        .page-inner p { text-indent: 2em; margin-bottom: 0.8em; }
         
         .footer {
             height: 35px; display: flex; align-items: center; justify-content: center;
@@ -153,7 +159,9 @@
     <div class="reader" id="reader" style="display:none">
         <div class="header" id="header">第1章</div>
         <div class="page-container">
-            <div class="page-content" id="content"></div>
+            <div class="page-content" id="content">
+                <div class="page-inner" id="pageInner"></div>
+            </div>
         </div>
         <div class="footer" id="footer">1 / 1</div>
     </div>
@@ -259,7 +267,7 @@
             { num: 80, file: "chapter-80.md", title: "第八十章 代码永恒" },
         ];
 
-        let ch = 1, page = 0, pages = [], settings = {fontSize: 17, theme: 'light'};
+        let ch = 1, page = 0, totalPages = 1, settings = {fontSize: 17, theme: 'light'};
         
         function init() {
             const s = localStorage.getItem('rs');
@@ -297,41 +305,43 @@
         }
         
         function splitPages(html) {
-            const container = document.querySelector('.page-container');
-            const content = document.getElementById('content');
-            const h = container.clientHeight - 30;
+            const inner = document.getElementById('pageInner');
+            inner.innerHTML = html;
             
-            // 临时渲染计算
-            content.innerHTML = html;
-            content.style.height = 'auto';
-            content.style.overflow = 'visible';
-            
-            const totalH = content.scrollHeight;
-            const pageCount = Math.ceil(totalH / h);
-            
-            pages = [];
-            for (let i = 0; i < pageCount; i++) {
-                pages.push({top: i * h, height: h});
-            }
-            
-            content.style.height = h + 'px';
-            content.style.overflow = 'hidden';
-            
-            showPage(0);
+            // 等待渲染完成后计算
+            setTimeout(() => {
+                const content = document.getElementById('content');
+                const totalWidth = inner.scrollWidth;
+                const pageWidth = content.clientWidth;
+                totalPages = Math.ceil(totalWidth / pageWidth);
+                if (totalPages < 1) totalPages = 1;
+                
+                showPage(0);
+            }, 50);
         }
         
         function showPage(p) {
             if (p < 0) {
-                if (ch > 1) { loadCh(ch-1); setTimeout(() => showPage(pages.length-1), 100); }
+                if (ch > 1) { 
+                    loadCh(ch-1); 
+                    setTimeout(() => {
+                        const inner = document.getElementById('pageInner');
+                        const content = document.getElementById('content');
+                        totalPages = Math.ceil(inner.scrollWidth / content.clientWidth);
+                        showPage(totalPages - 1);
+                    }, 200);
+                }
                 return;
             }
-            if (p >= pages.length) {
+            if (p >= totalPages) {
                 if (ch < 80) loadCh(ch+1);
                 return;
             }
             page = p;
-            document.getElementById('content').scrollTop = pages[p].top;
-            document.getElementById('footer').textContent = (p+1) + ' / ' + pages.length;
+            const content = document.getElementById('content');
+            const pageWidth = content.clientWidth;
+            content.scrollTo({ left: p * pageWidth, behavior: 'smooth' });
+            document.getElementById('footer').textContent = (p+1) + ' / ' + totalPages;
         }
         
         function prev() { showPage(page - 1); }
@@ -378,7 +388,7 @@
         }
         
         function goCh(n) { toggleMenu(); loadCh(n); }
-        function setFont(s) { settings.fontSize = s; save(); applySettings(); splitPages(document.getElementById('content').innerHTML); renderSettings(); }
+        function setFont(s) { settings.fontSize = s; save(); applySettings(); splitPages(document.getElementById('pageInner').innerHTML); renderSettings(); }
         function setTheme(t) { settings.theme = t; save(); applySettings(); renderSettings(); }
         function save() { localStorage.setItem('rs', JSON.stringify(settings)); }
         
@@ -404,7 +414,7 @@
         
         window.addEventListener('resize', () => {
             if (document.getElementById('cover').classList.contains('hidden')) {
-                const html = document.getElementById('content').innerHTML;
+                const html = document.getElementById('pageInner').innerHTML;
                 if (html) setTimeout(() => splitPages(html), 100);
             }
         });
