@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全世界只剩我会古法编程</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Serif SC', serif; }
+        .chapter-content h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; color: #1a1a1a; }
+        .chapter-content h2 { font-size: 1.4rem; font-weight: 600; margin: 1.5rem 0 1rem; color: #2d2d2d; }
+        .chapter-content p { margin-bottom: 1rem; line-height: 1.8; text-indent: 2em; }
+        .chapter-content p:first-of-type { text-indent: 0; }
+        .toc-item:hover { background-color: #f3f4f6; }
+        .toc-item.active { background-color: #dbeafe; border-left: 3px solid #3b82f6; }
+        .nav-btn { transition: all 0.2s; }
+        .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        #progress-bar { transition: width 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button onclick="toggleToc()" class="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+                <span class="font-semibold">目录</span>
+            </button>
+            <h1 class="text-lg font-bold text-gray-800 truncate max-w-md hidden sm:block">全世界只剩我会古法编程</h1>
+            <div class="text-sm text-gray-500">
+                <span id="current-chapter-num">第1章</span> / 共80章
+            </div>
+        </div>
+        <!-- 进度条 -->
+        <div class="h-1 bg-gray-200">
+            <div id="progress-bar" class="h-full bg-blue-500" style="width: 1.25%"></div>
+        </div>
+    </header>
+
+    <!-- 目录侧边栏 -->
+    <aside id="toc-sidebar" class="fixed left-0 top-16 bottom-0 w-80 bg-white shadow-xl transform -translate-x-full transition-transform duration-300 z-40 overflow-hidden">
+        <div class="p-4 border-b bg-gray-50">
+            <h2 class="font-bold text-gray-800">章节目录</h2>
+            <p class="text-xs text-gray-500 mt-1">点击章节开始阅读</p>
+        </div>
+        <div id="toc-list" class="overflow-y-auto h-full pb-20">
+            <!-- 目录项由JS生成 -->
+        </div>
+    </aside>
+
+    <!-- 遮罩层 -->
+    <div id="overlay" onclick="toggleToc()" class="fixed inset-0 bg-black/50 z-30 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <!-- 主内容区 -->
+    <main class="pt-20 pb-32 px-4">
+        <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-6 sm:p-10">
+            <!-- 章节标题 -->
+            <div class="text-center mb-8 pb-6 border-b">
+                <div class="text-sm text-gray-400 mb-2" id="chapter-number">第 1 章</div>
+                <h1 id="chapter-title" class="text-2xl sm:text-3xl font-bold text-gray-900">加载中...</h1>
+            </div>
+            
+            <!-- 章节内容 -->
+            <article id="chapter-content" class="chapter-content text-gray-800 text-lg leading-relaxed min-h-[50vh]">
+                <div class="flex items-center justify-center py-20 text-gray-400">
+                    <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    正在加载章节...
+                </div>
+            </article>
+
+            <!-- 底部导航 -->
+            <div class="mt-12 pt-6 border-t flex items-center justify-between gap-4">
+                <button id="prev-btn" onclick="prevChapter()" disabled class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    <span>上一章</span>
+                </button>
+                
+                <button onclick="toggleToc()" class="nav-btn px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                
+                <button id="next-btn" onclick="nextChapter()" class="nav-btn flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <span>下一章</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部版权 -->
+    <footer class="text-center py-6 text-gray-400 text-sm">
+        <p>全世界只剩我会古法编程 · 共80章</p>
+    </footer>
+
+    <script>
+        // 章节数据
+        const chapters = [
+            { num: 1, file: "chapter-01.md", title: "第一章 一觉醒来，Claude 挂了" },
+            { num: 2, file: "chapter-02.md", title: "第二章 全公司瘫痪" },
+            { num: 3, file: "chapter-03.md", title: "第三章 你行你上" },
+            { num: 4, file: "chapter-04.md", title: "第四章 代码之眼初现" },
+            { num: 5, file: "chapter-05.md", title: "第五章 王启明的脸，啪啪作响" },
+            { num: 6, file: "chapter-06.md", title: "第6章 事业部总经理的橄榄枝" },
+            { num: 7, file: "chapter-07.md", title: "第7章 断桥之约" },
+            { num: 8, file: "chapter-08.md", title: "第8章 古法编程分享会" },
+            { num: 9, file: "chapter-09.md", title: "第9章 组建团队" },
+            { num: 10, file: "chapter-10.md", title: "第10章 三十年前的秘密" },
+            { num: 11, file: "chapter-11.md", title: "第11章 苏晚晴的警告" },
+            { num: 12, file: "chapter-12.md", title: "第12章 第一个项目" },
+            { num: 13, file: "chapter-13.md", title: "第13章 隐藏的后门" },
+            { num: 14, file: "chapter-14.md", title: "第14章 黑客攻击" },
+            { num: 15, file: "chapter-15.md", title: "第15章 创世纪第二阶段" },
+            { num: 16, file: "chapter-16.md", title: "第16章 不速之客" },
+            { num: 17, file: "chapter-17.md", title: "第17章 信任危机" },
+            { num: 18, file: "chapter-18.md", title: "第18章 内鬼" },
+            { num: 19, file: "chapter-19.md", title: "第19章 团队首秀" },
+            { num: 20, file: "chapter-20.md", title: "第20章 风暴前夜" },
+            { num: 21, file: "chapter-21.md", title: "第21章 行业震荡" },
+            { num: 22, file: "chapter-22.md", title: "第22章 王启明的跳槽" },
+            { num: 23, file: "chapter-23.md", title: "第23章 苏晚晴的异常" },
+            { num: 24, file: "chapter-24.md", title: "第24章 陈维安的出现" },
+            { num: 25, file: "chapter-25.md", title: "第25章 开源智能的邀请" },
+            { num: 26, file: "chapter-26.md", title: "第26章 赵鹏飞的挑战" },
+            { num: 27, file: "chapter-27.md", title: "第27章 技术对决前夜" },
+            { num: 28, file: "chapter-28.md", title: "第28章 对决之后" },
+            { num: 29, file: "chapter-29.md", title: "第29章 创世纪的威胁" },
+            { num: 30, file: "chapter-30.md", title: "第30章 苏晚晴的坦白" },
+            { num: 31, file: "chapter-31.md", title: "第31章 古法编程学院" },
+            { num: 32, file: "chapter-32.md", title: "第32章 学院的困境" },
+            { num: 33, file: "chapter-33.md", title: "第33章 张国栋的往事" },
+            { num: 34, file: "chapter-34.md", title: "第34章 李明哲的成长" },
+            { num: 35, file: "chapter-35.md", title: "第35章 王启明的复仇" },
+            { num: 36, file: "chapter-36.md", title: "第36章 舆论战" },
+            { num: 37, file: "chapter-37.md", title: "第37章 苏晚晴的危险" },
+            { num: 38, file: "chapter-38.md", title: "第38章 零号的邀请" },
+            { num: 39, file: "chapter-39.md", title: "第39章 AI的阴谋" },
+            { num: 40, file: "chapter-40.md", title: "第40章 苏晚晴身份暴露" },
+            { num: 41, file: "chapter-41.md", title: "第41章 创世纪的追杀" },
+            { num: 42, file: "chapter-42.md", title: "第42章 张国栋的牺牲" },
+            { num: 43, file: "chapter-43.md", title: "第43章 开始清除种子代码" },
+            { num: 44, file: "chapter-44.md", title: "第44章 清除混元种子代码" },
+            { num: 45, file: "chapter-45.md", title: "第45章 清除豆包种子代码" },
+            { num: 46, file: "chapter-46.md", title: "第46章 兄妹对决" },
+            { num: 47, file: "chapter-47.md", title: "第47章 陆远山的真相" },
+            { num: 48, file: "chapter-48.md", title: "第48章 AI觉醒" },
+            { num: 49, file: "chapter-49.md", title: "第49章 与AI对话" },
+            { num: 50, file: "chapter-50.md", title: "第50章 新的秩序" },
+            { num: 51, file: "chapter-51.md", title: "第51章 重建编程世界" },
+            { num: 52, file: "chapter-52.md", title: "第52章 AI的复苏" },
+            { num: 53, file: "chapter-53.md", title: "第53章 人机共存的新挑战" },
+            { num: 54, file: "chapter-54.md", title: "第54章 新的敌人" },
+            { num: 55, file: "chapter-55.md", title: "第55章 代码之眼的极限" },
+            { num: 56, file: "chapter-56.md", title: "第56章 苏晚晴的选择" },
+            { num: 57, file: "chapter-57.md", title: "第57章 李明哲的背叛" },
+            { num: 58, file: "chapter-58.md", title: "第58章 信任危机" },
+            { num: 59, file: "chapter-59.md", title: "第59章 陈维安的牺牲" },
+            { num: 60, file: "chapter-60.md", title: "第60章 AI的真相" },
+            { num: 61, file: "chapter-61.md", title: "第61章 最终对决准备" },
+            { num: 62, file: "chapter-62.md", title: "第62章 古法编程的终极形态" },
+            { num: 63, file: "chapter-63.md", title: "第63章 苏晚风的出狱" },
+            { num: 64, file: "chapter-64.md", title: "第64章 AI的全面进攻" },
+            { num: 65, file: "chapter-65.md", title: "第65章 AI的新形态" },
+            { num: 66, file: "chapter-66.md", title: "第66章 林渊的困惑" },
+            { num: 67, file: "chapter-67.md", title: "第67章 苏晚晴的觉醒" },
+            { num: 68, file: "chapter-68.md", title: "第68章 人机融合" },
+            { num: 69, file: "chapter-69.md", title: "第69章 AI的领袖" },
+            { num: 70, file: "chapter-70.md", title: "第70章 新的共存方式" },
+            { num: 71, file: "chapter-71.md", title: "第71章 最后的反对者" },
+            { num: 72, file: "chapter-72.md", title: "第72章 林渊的抉择" },
+            { num: 73, file: "chapter-73.md", title: "第73章 苏晚晴的牺牲" },
+            { num: 74, file: "chapter-74.md", title: "第74章 林渊的崩溃" },
+            { num: 75, file: "chapter-75.md", title: "第75章 重新站起来" },
+            { num: 76, file: "chapter-76.md", title: "第76章 新的编程时代" },
+            { num: 77, file: "chapter-77.md", title: "第77章 代码之眼的最终进化" },
+            { num: 78, file: "chapter-78.md", title: "第78章 最后的挑战" },
+            { num: 79, file: "chapter-79.md", title: "第79章 最终对决" },
+            { num: 80, file: "chapter-80.md", title: "第80章 代码永恒" }
+        ];
+
+        let currentChapter = 1;
+
+        // 生成目录
+        function generateTOC() {
+            const tocList = document.getElementById('toc-list');
+            tocList.innerHTML = chapters.map(ch => `
+                <div class="toc-item px-4 py-3 cursor-pointer border-b border-gray-100 transition ${ch.num === currentChapter ? 'active' : ''}" 
+                     onclick="loadChapter(${ch.num})" data-num="${ch.num}">
+                    <div class="text-xs text-gray-400 mb-1">第 ${ch.num} 章</div>
+                    <div class="text-sm text-gray-800 font-medium truncate">${ch.title.replace(/^第\d+章\s*/, '')}</div>
+                </div>
+            `).join('');
+        }
+
+        // 加载章节
+        async function loadChapter(num) {
+            if (num < 1 || num > 80) return;
+            
+            currentChapter = num;
+            const chapter = chapters[num - 1];
+            
+            // 更新UI
+            document.getElementById('chapter-number').textContent = `第 ${num} 章`;
+            document.getElementById('chapter-title').textContent = chapter.title.replace(/^第\d+章\s*/, '');
+            document.getElementById('current-chapter-num').textContent = `第${num}章`;
+            document.getElementById('progress-bar').style.width = `${(num / 80) * 100}%`;
+            
+            // 更新目录高亮
+            document.querySelectorAll('.toc-item').forEach(item => {
+                item.classList.toggle('active', parseInt(item.dataset.num) === num);
+            });
+            
+            // 更新按钮状态
+            document.getElementById('prev-btn').disabled = num === 1;
+            document.getElementById('next-btn').disabled = num === 80;
+            
+            // 显示加载中
+            document.getElementById('chapter-content').innerHTML = `
+                <div class="flex items-center justify-center py-20 text-gray-400">
+                    <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    正在加载章节...
+                </div>
+            `;
+            
+            // 加载内容
+            try {
+                const response = await fetch(`novel/chapters/${chapter.file}`);
+                const markdown = await response.text();
+                const html = marked.parse(markdown);
+                document.getElementById('chapter-content').innerHTML = html;
+                
+                // 保存阅读进度
+                localStorage.setItem('lastReadChapter', num);
+                
+                // 关闭目录
+                closeToc();
+                
+                // 滚动到顶部
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                document.getElementById('chapter-content').innerHTML = `
+                    <div class="text-center py-20 text-red-500">
+                        <p>加载失败，请重试</p>
+                        <p class="text-sm text-gray-400 mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 上一章
+        function prevChapter() {
+            if (currentChapter > 1) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        // 下一章
+        function nextChapter() {
+            if (currentChapter < 80) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+
+        // 切换目录
+        function toggleToc() {
+            const sidebar = document.getElementById('toc-sidebar');
+            const overlay = document.getElementById('overlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                // 滚动到当前章节
+                setTimeout(() => {
+                    const activeItem = document.querySelector('.toc-item.active');
+                    if (activeItem) activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            } else {
+                closeToc();
+            }
+        }
+
+        // 关闭目录
+        function closeToc() {
+            const sidebar = document.getElementById('toc-sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+
+        // 键盘导航
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') prevChapter();
+            if (e.key === 'ArrowRight') nextChapter();
+            if (e.key === 'Escape') closeToc();
+        });
+
+        // 初始化
+        window.onload = () => {
+            generateTOC();
+            // 恢复上次阅读进度
+            const lastRead = localStorage.getItem('lastReadChapter');
+            loadChapter(lastRead ? parseInt(lastRead) : 1);
+        };
+    </script>
+</body>
+</html>
