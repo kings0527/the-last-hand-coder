@@ -75,6 +75,10 @@
         .touch-layer {
             position: fixed; top: 40px; bottom: 35px; left: 0; right: 0;
             display: flex; z-index: 10;
+            pointer-events: auto;
+        }
+        .touch-layer.disabled {
+            pointer-events: none;
         }
         .touch-left, .touch-right { flex: 1; }
         .touch-center { width: 80px; }
@@ -289,52 +293,65 @@
             loadCh(ch);
         }
         
-        async function loadCh(n) {
+        async function loadCh(n, targetPage = 0) {
             ch = n;
             localStorage.setItem('rc', ch);
             document.getElementById('header').textContent = chapters[ch-1].title;
             
+            // 先清空内容，避免显示旧内容
+            document.getElementById('pageInner').innerHTML = '';
+            document.getElementById('content').scrollLeft = 0;
+            page = 0;
+            totalPages = 1;
+            document.getElementById('footer').textContent = '1 / 1';
+            
             try {
                 const r = await fetch('novel/chapters/' + chapters[ch-1].file);
                 const md = await r.text();
-                const html = marked.parse(md);  // 不添加h1，只用顶部header
-                splitPages(html);
+                const html = marked.parse(md);
+                splitPages(html, targetPage);
             } catch(e) {
-                document.getElementById('content').innerHTML = '<p style="text-align:center;padding:50px">加载失败</p>';
+                document.getElementById('pageInner').innerHTML = '<p style="text-align:center;padding:50px">加载失败</p>';
             }
         }
         
-        function splitPages(html) {
+        function splitPages(html, targetPage = 0) {
             const inner = document.getElementById('pageInner');
+            const content = document.getElementById('content');
+            
+            // 先滚动到最左
+            content.scrollLeft = 0;
             inner.innerHTML = html;
             
             // 等待渲染完成后计算
             setTimeout(() => {
-                const content = document.getElementById('content');
                 const totalWidth = inner.scrollWidth;
                 const pageWidth = content.clientWidth;
-                totalPages = Math.ceil(totalWidth / pageWidth);
-                if (totalPages < 1) totalPages = 1;
+                totalPages = Math.max(1, Math.ceil(totalWidth / pageWidth));
                 
-                showPage(0);
+                // 计算实际目标页（-1表示最后一页）
+                const actualPage = targetPage === -1 ? totalPages - 1 : targetPage;
+                page = Math.max(0, Math.min(actualPage, totalPages - 1));
+                
+                // 直接跳转，不使用平滑滚动
+                content.scrollLeft = page * pageWidth;
+                document.getElementById('footer').textContent = (page+1) + ' / ' + totalPages;
             }, 50);
         }
         
         function showPage(p) {
             if (p < 0) {
                 if (ch > 1) { 
-                    loadCh(ch-1); 
-                    setTimeout(() => {
-                        const inner = document.getElementById('pageInner');
-                        const content = document.getElementById('content');
-                        totalPages = Math.ceil(inner.scrollWidth / content.clientWidth);
-                        showPage(totalPages - 1);
-                    }, 200);
+                    // 上一章最后一页
+                    loadCh(ch-1, -1); // -1 表示最后一页
                 }
                 return;
             }
             if (p >= totalPages) {
-                if (ch < 80) loadCh(ch+1);
+                if (ch < 80) {
+                    // 下一章第一页
+                    loadCh(ch+1, 0);
+                }
                 return;
             }
             page = p;
@@ -348,9 +365,11 @@
         function next() { showPage(page + 1); }
         
         function toggleMenu() {
+            const isOpening = !document.getElementById('menuPanel').classList.contains('show');
             document.getElementById('menuMask').classList.toggle('show');
             document.getElementById('menuPanel').classList.toggle('show');
-            if (document.getElementById('menuPanel').classList.contains('show')) {
+            document.getElementById('touchLayer').classList.toggle('disabled', isOpening);
+            if (isOpening) {
                 renderTOC();
             }
         }
@@ -387,7 +406,10 @@
                 '</div></div>';
         }
         
-        function goCh(n) { toggleMenu(); loadCh(n); }
+        function goCh(n) { 
+            toggleMenu();
+            setTimeout(() => loadCh(n, 0), 300); // 等待菜单关闭动画
+        }
         function setFont(s) { settings.fontSize = s; save(); applySettings(); splitPages(document.getElementById('pageInner').innerHTML); renderSettings(); }
         function setTheme(t) { settings.theme = t; save(); applySettings(); renderSettings(); }
         function save() { localStorage.setItem('rs', JSON.stringify(settings)); }
