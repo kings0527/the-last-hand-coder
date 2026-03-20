@@ -74,11 +74,11 @@
         /* 点击区域 */
         .touch-layer {
             position: fixed; top: 40px; bottom: 35px; left: 0; right: 0;
-            display: flex; z-index: 10;
-            pointer-events: auto;
+            display: flex;
+            z-index: 10;
         }
-        .touch-layer.disabled {
-            pointer-events: none;
+        .touch-left, .touch-right, .touch-center {
+            pointer-events: auto;
         }
         .touch-left, .touch-right { flex: 1; }
         .touch-center { width: 80px; }
@@ -368,7 +368,6 @@
             const isOpening = !document.getElementById('menuPanel').classList.contains('show');
             document.getElementById('menuMask').classList.toggle('show');
             document.getElementById('menuPanel').classList.toggle('show');
-            document.getElementById('touchLayer').classList.toggle('disabled', isOpening);
             if (isOpening) {
                 renderTOC();
             }
