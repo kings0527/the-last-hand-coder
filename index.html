@@ -8,111 +8,450 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Noto Serif SC', serif; overflow-x: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Noto Serif SC', serif; background: #1a1a2e; }
         
-        /* 翻页动画 */
-        .page-container { position: relative; min-height: 100vh; }
-        .page { 
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        /* 书架背景 */
+        .bookshelf-bg {
+            position: fixed; inset: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 50%, #1a1a2e 100%);
+            display: flex; align-items: center; justify-content: center;
         }
-        .page-enter { transform: translateX(100%); opacity: 0; }
-        .page-enter-active { transform: translateX(0); opacity: 1; }
-        .page-exit { transform: translateX(-30%); opacity: 0.7; }
-        .page-exit-left { transform: translateX(-100%); opacity: 0; }
         
-        /* 封面效果 */
-        .cover-gradient { background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
-        .glow-text { text-shadow: 0 0 30px rgba(139, 92, 246, 0.6); }
-        .stars { position: absolute; width: 100%; height: 100%; overflow: hidden; }
-        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle 3s infinite; }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        
-        /* 阅读区域 */
-        .reader-bg { background: #f5f5dc; }
-        .reader-bg-dark { background: #1a1a2e; color: #e0e0e0; }
-        .reader-bg-sepia { background: #f4ecd8; color: #5b4636; }
-        
-        .content-wrapper { 
-            max-width: 800px; margin: 0 auto; padding: 20px;
-            font-size: 18px; line-height: 1.8; 
+        /* 书籍容器 */
+        .book-container {
+            position: relative;
+            width: 90vw; max-width: 900px;
+            height: 85vh; max-height: 700px;
+            perspective: 2000px;
         }
-        @media (max-width: 640px) { .content-wrapper { font-size: 16px; padding: 16px; } }
         
-        .chapter-content h1 { display: none; }
-        .chapter-content h2 { 
-            font-size: 1.3em; font-weight: 600; margin: 1.5em 0 0.8em; 
-            color: inherit; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 0.3em;
+        /* 书页 */
+        .page {
+            position: absolute; inset: 0;
+            background: #faf8f3;
+            border-radius: 4px;
+            box-shadow: 
+                0 0 20px rgba(0,0,0,0.3),
+                inset 30px 0 40px -30px rgba(0,0,0,0.1),
+                inset -30px 0 40px -30px rgba(0,0,0,0.1);
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+            transform-origin: left center;
+            overflow: hidden;
+            display: flex; flex-direction: column;
         }
-        .chapter-content p { margin-bottom: 1em; text-indent: 2em; }
-        .chapter-content p:first-of-type { text-indent: 0; }
         
-        /* 目录样式 */
-        .toc-item { 
-            padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,0.05);
-            cursor: pointer; transition: all 0.2s;
+        .page.flipped {
+            transform: rotateY(-180deg);
         }
-        .toc-item:hover { background: rgba(59, 130, 246, 0.1); }
-        .toc-item.active { background: rgba(59, 130, 246, 0.15); border-left: 3px solid #3b82f6; }
-        .toc-item .chapter-num { font-size: 0.85em; color: #6b7280; margin-right: 8px; }
-        .toc-item .chapter-title { font-size: 0.95em; color: #1f2937; }
         
-        /* 底部导航栏 */
-        .bottom-bar { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0,0,0,0.1); z-index: 100;
+        /* 书页正面和背面 */
+        .page-face {
+            position: absolute; inset: 0;
+            backface-visibility: hidden;
+            background: #faf8f3;
+            overflow: hidden;
+            display: flex; flex-direction: column;
         }
-        .nav-btn { 
-            flex: 1; display: flex; align-items: center; justify-content: center;
-            padding: 12px; color: #4b5563; transition: all 0.2s;
-        }
-        .nav-btn:active { background: rgba(0,0,0,0.05); }
-        .nav-btn:disabled { color: #9ca3af; }
         
-        /* 设置面板 */
-        .settings-panel {
-            position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(100%);
-            background: white; border-radius: 16px 16px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 90;
-            width: 100%; max-width: 500px; padding: 20px;
-            transition: transform 0.3s ease;
+        .page-back {
+            transform: rotateY(180deg);
+            background: #f5f2e8;
         }
-        .settings-panel.open { transform: translateX(-50%) translateY(0); }
+        
+        /* 书脊效果 */
+        .page::before {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 40px;
+            background: linear-gradient(to right, 
+                rgba(0,0,0,0.1) 0%,
+                rgba(0,0,0,0.05) 20%,
+                transparent 100%);
+            z-index: 10; pointer-events: none;
+        }
+        
+        .page.flipped::after {
+            content: '';
+            position: absolute; right: 0; top: 0; bottom: 0; width: 40px;
+            background: linear-gradient(to left, 
+                rgba(0,0,0,0.1) 0%,
+                rgba(0,0,0,0.05) 20%,
+                transparent 100%);
+            z-index: 10; pointer-events: none;
+        }
+        
+        /* 页面内容 */
+        .page-header {
+            padding: 20px 40px 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .page-title {
+            font-size: 14px; color: #666;
+            letter-spacing: 2px;
+        }
+        
+        .page-content {
+            flex: 1;
+            padding: 30px 50px;
+            overflow-y: auto;
+            font-size: 18px;
+            line-height: 1.9;
+            color: #333;
+        }
+        
+        .page-content h1 { display: none; }
+        .page-content h2 {
+            font-size: 1.2em; font-weight: 600;
+            margin: 1.5em 0 0.8em;
+            color: #2d2d2d;
+        }
+        .page-content p {
+            margin-bottom: 1em;
+            text-indent: 2em;
+            text-align: justify;
+        }
+        
+        .page-number {
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        /* 翻页提示区 */
+        .page-zone {
+            position: absolute;
+            top: 60px; bottom: 60px;
+            width: 35%;
+            cursor: pointer;
+            z-index: 100;
+            transition: background 0.2s;
+        }
+        
+        .page-zone:hover {
+            background: rgba(59, 130, 246, 0.03);
+        }
+        
+        .page-zone-left { left: 0; }
+        .page-zone-right { right: 0; }
+        
+        .page-zone-center {
+            left: 35%; right: 35%;
+            cursor: default;
+        }
+        
+        /* 翻页箭头提示 */
+        .page-hint {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px; height: 50px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 50%;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .page-zone-left:hover .page-hint,
+        .page-zone-right:hover .page-hint {
+            opacity: 0.6;
+        }
+        
+        .page-hint-left { left: 20px; }
+        .page-hint-right { right: 20px; }
+        
+        /* 封面页 */
+        .cover-page {
+            position: absolute; inset: 0;
+            background: linear-gradient(145deg, #2d1b4e 0%, #1a1a2e 100%);
+            border-radius: 4px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        
+        .cover-page .book-title {
+            font-size: 2rem; font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 20px rgba(139, 92, 246, 0.5);
+        }
+        
+        .cover-page .book-subtitle {
+            font-size: 1rem; color: #a78bfa;
+            margin-bottom: 30px;
+        }
+        
+        .cover-page .book-cover-img {
+            max-width: 200px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            margin-bottom: 30px;
+        }
+        
+        .cover-page .book-desc {
+            max-width: 400px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+            margin-bottom: 30px;
+        }
+        
+        .cover-page .start-btn {
+            padding: 12px 40px;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .cover-page .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        /* 目录页 */
+        .toc-page {
+            position: absolute; inset: 0;
+            background: #faf8f3;
+            border-radius: 4px;
+            display: flex; flex-direction: column;
+        }
+        
+        .toc-header {
+            padding: 25px 30px;
+            border-bottom: 2px solid #8b5cf6;
+            display: flex; align-items: center; gap: 15px;
+        }
+        
+        .toc-header h2 {
+            font-size: 1.3rem; color: #333;
+        }
+        
+        .toc-back-btn {
+            width: 36px; height: 36px;
+            border: none; background: #f0f0f0;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .toc-back-btn:hover { background: #e0e0e0; }
+        
+        .toc-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 20px;
+        }
+        
+        .toc-item {
+            display: flex; align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+        }
+        
+        .toc-item:hover {
+            background: rgba(139, 92, 246, 0.08);
+        }
+        
+        .toc-item.active {
+            background: rgba(139, 92, 246, 0.15);
+        }
+        
+        .toc-num {
+            width: 45px;
+            font-size: 0.85rem; color: #8b5cf6;
+            font-weight: 600;
+        }
+        
+        .toc-title {
+            flex: 1;
+            font-size: 0.95rem; color: #333;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
         
         /* 进度条 */
-        .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: #3b82f6; z-index: 200; transition: width 0.3s; }
+        .progress-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 3px;
+            background: rgba(139, 92, 246, 0.3);
+            z-index: 1000;
+        }
         
-        /* 点击区域（翻页） */
-        .click-zone { position: fixed; top: 60px; bottom: 60px; z-index: 10; }
-        .click-zone-left { left: 0; width: 30%; }
-        .click-zone-right { right: 0; width: 30%; }
-        .click-zone-center { left: 30%; right: 30%; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #3b82f6);
+            transition: width 0.3s;
+        }
+        
+        /* 工具栏 */
+        .toolbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .toolbar.visible { opacity: 1; }
+        
+        .toolbar-btn {
+            width: 40px; height: 40px;
+            border: none; background: transparent;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .toolbar-btn:hover { background: rgba(255,255,255,0.1); }
+        
+        /* 设置面板 */
+        .settings-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none; align-items: center; justify-content: center;
+            z-index: 300;
+        }
+        
+        .settings-modal.show { display: flex; }
+        
+        .settings-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            width: 90%; max-width: 400px;
+        }
+        
+        .settings-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .settings-header h3 {
+            font-size: 1.1rem; color: #333;
+        }
+        
+        .close-btn {
+            width: 32px; height: 32px;
+            border: none; background: #f0f0f0;
+            border-radius: 50%;
+            cursor: pointer;
+        }
         
         /* 加载动画 */
-        .loading { 
-            display: flex; align-items: center; justify-content: center; 
-            min-height: 50vh; color: #6b7280;
+        .loading {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 300px;
         }
-        .spinner { 
-            width: 40px; height: 40px; border: 3px solid #e5e7eb; 
-            border-top-color: #3b82f6; border-radius: 50%; 
-            animation: spin 1s linear infinite; 
+        
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
+        
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* 隐藏滚动条但保留功能 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 隐藏滚动条 */
+        .page-content::-webkit-scrollbar,
+        .toc-list::-webkit-scrollbar { width: 4px; }
+        
+        .page-content::-webkit-scrollbar-thumb,
+        .toc-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 2px; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .book-container {
+                width: 95vw; height: 90vh;
+            }
+            .page-content {
+                padding: 20px 25px;
+                font-size: 16px;
+            }
+            .page-header { padding: 15px 25px 8px; }
+            .cover-page { padding: 25px; }
+            .cover-page .book-title { font-size: 1.5rem; }
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
     <!-- 进度条 -->
-    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
     
-    <!-- 页面容器 -->
-    <div id="app" class="page-container">
+    <!-- 主容器 -->
+    <div class="bookshelf-bg">
+        <div class="book-container" id="book-container">
+            <!-- 内容将由 JS 动态生成 -->
+        </div>
+    </div>
+    
+    <!-- 工具栏 -->
+    <div class="toolbar" id="toolbar">
+        <button class="toolbar-btn" onclick="showTOC()" title="目录">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+        <button class="toolbar-btn" onclick="toggleSettings()" title="设置">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+            </svg>
+        </button>
+    </div>
+    
+    <!-- 设置面板 -->
+    <div class="settings-modal" id="settings-modal" onclick="if(event.target===this)toggleSettings()">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h3>阅读设置</h3>
+                <button class="close-btn" onclick="toggleSettings()">✕</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; color: #666; font-size: 0.9rem;">字体大小</label>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="setFontSize(14)" class="font-btn" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer;">小</button>
+                    <button onclick="setFontSize(16)" class="font-btn" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer;">中</button>
+                    <button onclick="setFontSize(18)" class="font-btn" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer;">大</button>
+                    <button onclick="setFontSize(20)" class="font-btn" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer;">特大</button>
+                </div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 10px; color: #666; font-size: 0.9rem;">背景颜色</label>
+                <div style="display: flex; gap: 15px;">
+                    <button onclick="setBgColor('light')" class="bg-btn" style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; background: #faf8f3; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></button>
+                    <button onclick="setBgColor('sepia')" class="bg-btn" style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; background: #f4ecd8; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></button>
+                    <button onclick="setBgColor('dark')" class="bg-btn" style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; background: #2d2d44; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -200,302 +539,283 @@
             { num: 80, file: "chapter-80.md", title: "第八十章 代码永恒" },
         ];
 
-        // 状态管理
+        // 状态
         let currentView = 'cover'; // cover, toc, reader
         let currentChapter = 1;
         let settings = {
             fontSize: 18,
-            bgColor: 'light', // light, dark, sepia
-            theme: 'default'
+            bgColor: 'light'
         };
+        let toolbarTimer = null;
 
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('readerSettings');
+            const saved = localStorage.getItem('bookReaderSettings');
             if (saved) settings = JSON.parse(saved);
+            
+            const lastChapter = localStorage.getItem('lastReadChapter');
+            if (lastChapter) currentChapter = parseInt(lastChapter);
+            
             render();
+            setupInteractions();
         });
 
-        // 渲染主函数
+        // 渲染
         function render() {
-            const app = document.getElementById('app');
-            app.innerHTML = '';
+            const container = document.getElementById('book-container');
+            container.innerHTML = '';
             
             if (currentView === 'cover') {
-                app.innerHTML = renderCover();
+                renderCover(container);
             } else if (currentView === 'toc') {
-                app.innerHTML = renderTOC();
-            } else if (currentView === 'reader') {
-                app.innerHTML = renderReader();
-                loadChapterContent(currentChapter);
+                renderTOC(container);
+            } else {
+                renderReader(container);
             }
+            
+            updateSettingsUI();
         }
 
-        // 封面页
-        function renderCover() {
-            return `
-                <div class="page page-enter-active cover-gradient min-h-screen flex flex-col items-center justify-center px-6 py-12 relative">
-                    <!-- 星空背景 -->
-                    <div class="stars" id="stars"></div>
-                    
-                    <div class="relative z-10 text-center max-w-lg w-full">
-                        <!-- 封面图 -->
-                        <div class="mb-8">
-                            <img src="cover.jpg" alt="封面" 
-                                 class="mx-auto max-w-xs w-full rounded-lg shadow-2xl"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <div class="hidden mx-auto max-w-xs w-full aspect-[3/4] bg-gradient-to-br from-purple-800 to-blue-900 rounded-lg shadow-2xl items-center justify-center">
-                                <div class="text-6xl">👁️</div>
-                            </div>
-                        </div>
-                        
-                        <!-- 标题 -->
-                        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-3 glow-text tracking-wide">
-                            全世界只剩我会古法编程
-                        </h1>
-                        <p class="text-purple-200 text-lg mb-6">硬核科幻 · 程序员逆袭 · 人机共存</p>
-                        
-                        <!-- 简介 -->
-                        <div class="bg-white/10 backdrop-blur rounded-xl p-5 mb-8 text-left text-gray-100 text-base leading-relaxed">
-                            <p>全球AI一夜瘫痪，所有程序员集体抓瞎。只有林渊，这个买不起AI会员的"原始人"，靠手写代码成了全公司的救世主。</p>
-                            <p class="mt-3">当<span class="text-purple-300 font-semibold">代码之眼</span>觉醒，他看见的不是bug，是真相。</p>
-                        </div>
-                        
-                        <!-- 按钮 -->
-                        <div class="space-y-3">
-                            <button onclick="startReading()" 
-                                    class="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-lg font-bold rounded-full hover:from-purple-500 hover:to-blue-500 transition shadow-lg">
-                                开始阅读
-                            </button>
-                            <button onclick="showTOC()" 
-                                    class="w-full py-3 bg-white/20 text-white text-base font-medium rounded-full hover:bg-white/30 transition">
-                                查看目录
-                            </button>
-                        </div>
-                        
-                        <!-- 统计 -->
-                        <div class="flex justify-center gap-8 mt-8 text-gray-300 text-sm">
-                            <div><span class="text-white font-bold text-lg">80</span><br>章节</div>
-                            <div><span class="text-white font-bold text-lg">30万+</span><br>字数</div>
-                            <div><span class="text-white font-bold text-lg">已完结</span><br>状态</div>
-                        </div>
-                    </div>
+        // 封面
+        function renderCover(container) {
+            container.innerHTML = `
+                <div class="cover-page">
+                    <img src="cover.jpg" alt="封面" class="book-cover-img" 
+                         onerror="this.style.display='none'">
+                    <h1 class="book-title">全世界只剩我会古法编程</h1>
+                    <p class="book-subtitle">硬核科幻 · 程序员逆袭 · 人机共存</p>
+                    <p class="book-desc">
+                        全球AI一夜瘫痪，所有程序员集体抓瞎。只有林渊，这个买不起AI会员的"原始人"，
+                        靠手写代码成了全公司的救世主。
+                    </p>
+                    <button class="start-btn" onclick="startReading()">开始阅读</button>
                 </div>
             `;
+            document.getElementById('toolbar').classList.remove('visible');
         }
 
-        // 目录页
-        function renderTOC() {
-            const tocItems = chapters.map(ch => `
-                <div class="toc-item ${ch.num === currentChapter ? 'active' : ''}" onclick="loadChapter(${ch.num})">
-                    <span class="chapter-num">第${ch.num}章</span>
-                    <span class="chapter-title">${ch.title.replace(/^第.*?章\s*/, '')}</span>
+        // 目录
+        function renderTOC(container) {
+            const items = chapters.map(ch => `
+                <div class="toc-item ${ch.num === currentChapter ? 'active' : ''}" onclick="goToChapter(${ch.num})">
+                    <span class="toc-num">第${ch.num}章</span>
+                    <span class="toc-title">${ch.title.replace(/^第.*?章\s*/, '')}</span>
                 </div>
             `).join('');
             
-            return `
-                <div class="page page-enter-active min-h-screen bg-white">
-                    <!-- 顶部导航 -->
-                    <div class="sticky top-0 bg-white/95 backdrop-blur border-b px-4 py-3 flex items-center z-10">
-                        <button onclick="showCover()" class="p-2 -ml-2 text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            container.innerHTML = `
+                <div class="toc-page">
+                    <div class="toc-header">
+                        <button class="toc-back-btn" onclick="showCover()">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M15 19l-7-7 7-7"/>
                             </svg>
                         </button>
-                        <h2 class="ml-2 text-lg font-bold text-gray-800">章节目录</h2>
+                        <h2>章节目录</h2>
                     </div>
-                    
-                    <!-- 章节列表 -->
-                    <div class="pb-20">
-                        ${tocItems}
-                    </div>
+                    <div class="toc-list">${items}</div>
                 </div>
             `;
+            document.getElementById('toolbar').classList.remove('visible');
         }
 
-        // 阅读页
-        function renderReader() {
-            const bgClass = settings.bgColor === 'dark' ? 'reader-bg-dark' : 
-                           settings.bgColor === 'sepia' ? 'reader-bg-sepia' : 'reader-bg';
+        // 阅读器
+        function renderReader(container) {
+            const bgColors = {
+                light: '#faf8f3',
+                sepia: '#f4ecd8',
+                dark: '#2d2d44'
+            };
+            const textColors = {
+                light: '#333',
+                sepia: '#5b4636',
+                dark: '#e0e0e0'
+            };
             
-            return `
-                <div class="page page-enter-active min-h-screen ${bgClass} relative">
-                    <!-- 顶部标题栏 -->
-                    <div class="sticky top-0 ${bgClass} border-b border-black/10 px-4 py-3 flex items-center justify-between z-20">
-                        <button onclick="showTOC()" class="p-2 -ml-2 text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                            </svg>
-                        </button>
-                        <div class="text-sm text-gray-600 truncate max-w-[50%]" id="reader-title">加载中...</div>
-                        <button onclick="toggleSettings()" class="p-2 -mr-2 text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- 内容区域 -->
-                    <div class="content-wrapper" id="content-wrapper" style="font-size: ${settings.fontSize}px">
-                        <div id="chapter-content" class="chapter-content">
-                            <div class="loading"><div class="spinner"></div></div>
+            const chapter = chapters[currentChapter - 1];
+            
+            container.innerHTML = `
+                <div class="page" id="current-page" style="background: ${bgColors[settings.bgColor]}; color: ${textColors[settings.bgColor]}">
+                    <div class="page-face" style="background: ${bgColors[settings.bgColor]}">
+                        <div class="page-header">
+                            <div class="page-title">${chapter.title}</div>
                         </div>
-                    </div>
-                    
-                    <!-- 点击翻页区域 -->
-                    <div class="click-zone click-zone-left" onclick="prevChapter()"></div>
-                    <div class="click-zone click-zone-center" onclick="toggleSettings()"></div>
-                    <div class="click-zone click-zone-right" onclick="nextChapter()"></div>
-                    
-                    <!-- 底部导航 -->
-                    <div class="bottom-bar flex">
-                        <button onclick="prevChapter()" ${currentChapter <= 1 ? 'disabled' : ''} class="nav-btn">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                            </svg>
-                            <span class="ml-1">上一章</span>
-                        </button>
-                        <button onclick="showTOC()" class="nav-btn">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                            </svg>
-                        </button>
-                        <button onclick="nextChapter()" ${currentChapter >= 80 ? 'disabled' : ''} class="nav-btn">
-                            <span class="mr-1">下一章</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- 设置面板 -->
-                    <div id="settings-panel" class="settings-panel">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-gray-800">阅读设置</h3>
-                            <button onclick="toggleSettings()" class="p-1">
-                                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
+                        <div class="page-content" id="page-content" style="font-size: ${settings.fontSize}px; color: ${textColors[settings.bgColor]}">
+                            <div class="loading"><div class="loading-spinner"></div></div>
                         </div>
-                        
-                        <!-- 字号 -->
-                        <div class="mb-4">
-                            <label class="text-sm text-gray-600 mb-2 block">字体大小</label>
-                            <div class="flex gap-2">
-                                <button onclick="setFontSize(14)" class="flex-1 py-2 rounded-lg border ${settings.fontSize === 14 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700'}">小</button>
-                                <button onclick="setFontSize(16)" class="flex-1 py-2 rounded-lg border ${settings.fontSize === 16 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700'}">中</button>
-                                <button onclick="setFontSize(18)" class="flex-1 py-2 rounded-lg border ${settings.fontSize === 18 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700'}">大</button>
-                                <button onclick="setFontSize(20)" class="flex-1 py-2 rounded-lg border ${settings.fontSize === 20 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700'}">特大</button>
-                            </div>
-                        </div>
-                        
-                        <!-- 背景 -->
-                        <div>
-                            <label class="text-sm text-gray-600 mb-2 block">背景颜色</label>
-                            <div class="flex gap-3">
-                                <button onclick="setBgColor('light')" class="w-12 h-12 rounded-full border-2 ${settings.bgColor === 'light' ? 'border-blue-500' : 'border-gray-200'}" style="background: #f5f5dc"></button>
-                                <button onclick="setBgColor('sepia')" class="w-12 h-12 rounded-full border-2 ${settings.bgColor === 'sepia' ? 'border-blue-500' : 'border-gray-200'}" style="background: #f4ecd8"></button>
-                                <button onclick="setBgColor('dark')" class="w-12 h-12 rounded-full border-2 ${settings.bgColor === 'dark' ? 'border-blue-500' : 'border-gray-200'}" style="background: #1a1a2e"></button>
-                            </div>
-                        </div>
+                        <div class="page-number">- ${currentChapter} / 80 -</div>
                     </div>
                 </div>
+                <div class="page-zone page-zone-left" onclick="prevChapter()">
+                    <div class="page-hint page-hint-left">◀</div>
+                </div>
+                <div class="page-zone page-zone-center" onclick="showToolbar()"></div>
+                <div class="page-zone page-zone-right" onclick="nextChapter()">
+                    <div class="page-hint page-hint-right">▶</div>
+                </div>
             `;
+            
+            document.getElementById('toolbar').classList.add('visible');
+            loadChapterContent();
         }
 
         // 加载章节内容
-        async function loadChapterContent(num) {
-            const chapter = chapters[num - 1];
-            document.getElementById('reader-title').textContent = chapter.title;
-            document.getElementById('progress-bar').style.width = `${(num / 80) * 100}%`;
+        async function loadChapterContent() {
+            const chapter = chapters[currentChapter - 1];
+            const contentEl = document.getElementById('page-content');
             
             try {
                 const response = await fetch(`novel/chapters/${chapter.file}`);
                 const markdown = await response.text();
                 const html = marked.parse(markdown);
-                document.getElementById('chapter-content').innerHTML = html;
-                localStorage.setItem('lastReadChapter', num);
-                window.scrollTo(0, 0);
-            } catch (error) {
-                document.getElementById('chapter-content').innerHTML = `
-                    <div class="text-center py-20 text-red-500">
-                        <p>加载失败</p>
-                        <p class="text-sm mt-2">${error.message}</p>
-                    </div>
-                `;
+                contentEl.innerHTML = html;
+                
+                // 应用颜色
+                const textColors = {
+                    light: '#333',
+                    sepia: '#5b4636',
+                    dark: '#e0e0e0'
+                };
+                contentEl.style.color = textColors[settings.bgColor];
+                
+                // 更新进度
+                document.getElementById('progress-fill').style.width = `${(currentChapter / 80) * 100}%`;
+                localStorage.setItem('lastReadChapter', currentChapter);
+            } catch (err) {
+                contentEl.innerHTML = `<p style="text-align: center; color: #999;">加载失败，请重试</p>`;
             }
         }
 
-        // 导航函数
-        function showCover() { currentView = 'cover'; render(); }
-        function showTOC() { currentView = 'toc'; render(); }
+        // 导航
         function startReading() {
-            const last = localStorage.getItem('lastReadChapter');
-            currentChapter = last ? parseInt(last) : 1;
             currentView = 'reader';
             render();
         }
-        function loadChapter(num) {
-            if (num < 1 || num > 80) return;
+        
+        function showCover() {
+            currentView = 'cover';
+            render();
+        }
+        
+        function showTOC() {
+            currentView = 'toc';
+            render();
+        }
+        
+        function goToChapter(num) {
             currentChapter = num;
             currentView = 'reader';
             render();
         }
+
+        // 翻页
         function prevChapter() {
             if (currentChapter > 1) {
-                currentChapter--;
-                loadChapterContent(currentChapter);
-                updateReaderUI();
+                animatePageTurn('prev', () => {
+                    currentChapter--;
+                    renderReader(document.getElementById('book-container'));
+                });
             }
         }
+        
         function nextChapter() {
             if (currentChapter < 80) {
-                currentChapter++;
-                loadChapterContent(currentChapter);
-                updateReaderUI();
+                animatePageTurn('next', () => {
+                    currentChapter++;
+                    renderReader(document.getElementById('book-container'));
+                });
             }
         }
-        function updateReaderUI() {
-            document.querySelectorAll('.nav-btn')[0].disabled = currentChapter <= 1;
-            document.querySelectorAll('.nav-btn')[2].disabled = currentChapter >= 80;
+
+        // 翻页动画
+        function animatePageTurn(direction, callback) {
+            const page = document.getElementById('current-page');
+            if (!page) { callback(); return; }
+            
+            // 简单的淡出效果
+            page.style.transition = 'opacity 0.2s, transform 0.3s';
+            page.style.opacity = '0.5';
+            page.style.transform = direction === 'next' ? 'translateX(-20px)' : 'translateX(20px)';
+            
+            setTimeout(() => {
+                callback();
+                const newPage = document.getElementById('current-page');
+                if (newPage) {
+                    newPage.style.opacity = '0.5';
+                    newPage.style.transform = direction === 'next' ? 'translateX(20px)' : 'translateX(-20px)';
+                    setTimeout(() => {
+                        newPage.style.opacity = '1';
+                        newPage.style.transform = 'translateX(0)';
+                    }, 50);
+                }
+            }, 200);
+        }
+
+        // 工具栏
+        function showToolbar() {
+            const toolbar = document.getElementById('toolbar');
+            toolbar.classList.add('visible');
+            clearTimeout(toolbarTimer);
+            toolbarTimer = setTimeout(() => toolbar.classList.remove('visible'), 3000);
         }
 
         // 设置
         function toggleSettings() {
-            document.getElementById('settings-panel').classList.toggle('open');
+            document.getElementById('settings-modal').classList.toggle('show');
         }
+        
         function setFontSize(size) {
             settings.fontSize = size;
-            localStorage.setItem('readerSettings', JSON.stringify(settings));
-            document.getElementById('content-wrapper').style.fontSize = size + 'px';
-            render(); // 重新渲染以更新按钮状态
-            if (currentView === 'reader') loadChapterContent(currentChapter);
+            localStorage.setItem('bookReaderSettings', JSON.stringify(settings));
+            updateSettingsUI();
+            if (currentView === 'reader') {
+                document.getElementById('page-content').style.fontSize = size + 'px';
+            }
         }
+        
         function setBgColor(color) {
             settings.bgColor = color;
-            localStorage.setItem('readerSettings', JSON.stringify(settings));
-            render();
-            if (currentView === 'reader') loadChapterContent(currentChapter);
+            localStorage.setItem('bookReaderSettings', JSON.stringify(settings));
+            updateSettingsUI();
+            if (currentView === 'reader') render();
+        }
+        
+        function updateSettingsUI() {
+            document.querySelectorAll('.font-btn').forEach(btn => {
+                btn.style.borderColor = btn.textContent === getSizeLabel(settings.fontSize) ? '#8b5cf6' : '#ddd';
+                btn.style.color = btn.textContent === getSizeLabel(settings.fontSize) ? '#8b5cf6' : '#333';
+            });
+            document.querySelectorAll('.bg-btn').forEach(btn => {
+                btn.style.borderColor = btn.getAttribute('onclick').includes(settings.bgColor) ? '#8b5cf6' : 'transparent';
+            });
+        }
+        
+        function getSizeLabel(size) {
+            return {14: '小', 16: '中', 18: '大', 20: '特大'}[size] || '中';
         }
 
-        // 键盘支持
-        document.addEventListener('keydown', (e) => {
-            if (currentView !== 'reader') return;
-            if (e.key === 'ArrowLeft') prevChapter();
-            if (e.key === 'ArrowRight' || e.key === ' ') nextChapter();
-        });
-
-        // 触摸滑动支持
-        let touchStartX = 0;
-        let touchEndX = 0;
-        document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
-        document.addEventListener('touchend', (e) => {
-            if (currentView !== 'reader') return;
-            touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 50) nextChapter();
-            if (touchEndX - touchStartX > 50) prevChapter();
-        });
+        // 交互设置
+        function setupInteractions() {
+            // 键盘
+            document.addEventListener('keydown', (e) => {
+                if (currentView !== 'reader') return;
+                if (e.key === 'ArrowLeft') prevChapter();
+                if (e.key === 'ArrowRight' || e.key === ' ') nextChapter();
+            });
+            
+            // 触摸滑动
+            let startX = 0;
+            document.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; });
+            document.addEventListener('touchend', (e) => {
+                if (currentView !== 'reader') return;
+                const endX = e.changedTouches[0].clientX;
+                const diff = startX - endX;
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) nextChapter();
+                    else prevChapter();
+                }
+            });
+        }
     </script>
 </body>
 </html>
