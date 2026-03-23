@@ -96,6 +96,11 @@
     var nextChapter = getNextChapter();
     btn.textContent = '📚 请上传第' + nextChapter + '章';
     btn.style.cssText = 'position:fixed;bottom:100px;left:20px;background:#ff6b6b;color:white;padding:12px 20px;border-radius:8px;z-index:999999;cursor:pointer;font-size:14px;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    
+    // 添加脉冲动画样式
+    var style = document.createElement('style');
+    style.textContent = '@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }';
+    document.head.appendChild(style);
     document.body.appendChild(btn);
     
     var fileInput = document.createElement('input');
@@ -109,17 +114,50 @@
     
     // 页面加载后自动弹出文件选择器（适用于所有发布页面）
     var autoPopupTriggered = false;
-    var checkEditor = setInterval(function() {
+    var pendingAutoPopup = false;
+    
+    // 尝试自动弹出的函数
+    function tryAutoPopup() {
+        if (autoPopupTriggered) return false;
         var editor = document.querySelector('[contenteditable="true"]');
-        if (editor && !autoPopupTriggered) {
+        if (editor) {
             autoPopupTriggered = true;
-            clearInterval(checkEditor);
             console.log('✅ 编辑器已加载');
-            // 自动弹出文件选择器
             console.log('📄 自动弹出文件选择器，请上传第' + getNextChapter() + '章');
-            setTimeout(function() { fileInput.click(); }, 800);
+            fileInput.click();
+            return true;
         }
-    }, 500);
+        return false;
+    }
+    
+    // 1. 等待编辑器加载后自动弹出
+    var checkEditor = setInterval(function() {
+        if (tryAutoPopup()) {
+            clearInterval(checkEditor);
+        }
+    }, 300);
+    
+    // 2. 浏览器可能阻止自动弹出，监听首次点击页面任意位置后触发
+    function onFirstClick() {
+        if (!autoPopupTriggered) {
+            console.log('👆 检测到点击，尝试弹出文件选择器');
+            if (tryAutoPopup()) {
+                clearInterval(checkEditor);
+            }
+        }
+        document.removeEventListener('click', onFirstClick);
+    }
+    document.addEventListener('click', onFirstClick);
+    
+    // 3. 3秒后如果还没弹出，显示提示让用户点击按钮
+    setTimeout(function() {
+        if (!autoPopupTriggered) {
+            console.log('⏰ 自动弹出被阻止，请手动点击按钮选择文件');
+            btn.style.background = '#faad14';
+            btn.textContent = '👆 点击上传第' + getNextChapter() + '章';
+            btn.style.animation = 'pulse 1s infinite';
+        }
+    }, 3000);
     
     fileInput.onchange = function(e) {
         var file = e.target.files[0];
