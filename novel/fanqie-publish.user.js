@@ -91,16 +91,26 @@
         return false;
     }
     
-    // 创建按钮（显示下次应该上传的章节）
-    var btn = document.createElement('div');
+    // 创建大提示弹窗（页面中央）
     var nextChapter = getNextChapter();
-    btn.textContent = '📚 请上传第' + nextChapter + '章';
-    btn.style.cssText = 'position:fixed;bottom:100px;left:20px;background:#ff6b6b;color:white;padding:12px 20px;border-radius:8px;z-index:999999;cursor:pointer;font-size:14px;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    var overlay = document.createElement('div');
+    overlay.id = 'fq-upload-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999998;display:flex;align-items:center;justify-content:center;';
     
-    // 添加脉冲动画样式
-    var style = document.createElement('style');
-    style.textContent = '@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }';
-    document.head.appendChild(style);
+    var popup = document.createElement('div');
+    popup.style.cssText = 'background:white;padding:40px 60px;border-radius:16px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-width:400px;';
+    popup.innerHTML = '<div style="font-size:48px;margin-bottom:20px;">📚</div>' +
+                      '<div style="font-size:24px;font-weight:bold;color:#333;margin-bottom:10px;">请上传第' + nextChapter + '章</div>' +
+                      '<div style="font-size:14px;color:#666;margin-bottom:30px;">点击页面任意位置选择文件</div>' +
+                      '<div style="font-size:12px;color:#999;">上次上传：第' + getLastChapter() + '章</div>';
+    
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    
+    // 创建左下角按钮（备用）
+    var btn = document.createElement('div');
+    btn.textContent = '📚 第' + nextChapter + '章';
+    btn.style.cssText = 'position:fixed;bottom:100px;left:20px;background:#ff6b6b;color:white;padding:12px 20px;border-radius:8px;z-index:999999;cursor:pointer;font-size:14px;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:none;';
     document.body.appendChild(btn);
     
     var fileInput = document.createElement('input');
@@ -109,55 +119,33 @@
     fileInput.style.display = 'none';
     document.body.appendChild(fileInput);
     
+    // 隐藏弹窗和按钮的函数
+    function hideOverlay() {
+        overlay.style.display = 'none';
+        btn.style.display = 'block';
+    }
+    
+    // 触发文件选择的函数
+    function triggerFileSelect() {
+        hideOverlay();
+        console.log('📂 打开文件选择器，请上传第' + getNextChapter() + '章');
+        fileInput.click();
+    }
+    
     // 点击按钮选择文件
-    btn.onclick = function() { fileInput.click(); };
+    btn.onclick = triggerFileSelect;
     
-    // 页面加载后自动弹出文件选择器（适用于所有发布页面）
-    var autoPopupTriggered = false;
-    var pendingAutoPopup = false;
+    // 点击弹窗或页面任意位置触发文件选择
+    overlay.onclick = triggerFileSelect;
     
-    // 尝试自动弹出的函数
-    function tryAutoPopup() {
-        if (autoPopupTriggered) return false;
+    // 等待编辑器加载
+    var checkEditor = setInterval(function() {
         var editor = document.querySelector('[contenteditable="true"]');
         if (editor) {
-            autoPopupTriggered = true;
-            console.log('✅ 编辑器已加载');
-            console.log('📄 自动弹出文件选择器，请上传第' + getNextChapter() + '章');
-            fileInput.click();
-            return true;
-        }
-        return false;
-    }
-    
-    // 1. 等待编辑器加载后自动弹出
-    var checkEditor = setInterval(function() {
-        if (tryAutoPopup()) {
             clearInterval(checkEditor);
+            console.log('✅ 编辑器已加载，等待用户点击...');
         }
     }, 300);
-    
-    // 2. 浏览器可能阻止自动弹出，监听首次点击页面任意位置后触发
-    function onFirstClick() {
-        if (!autoPopupTriggered) {
-            console.log('👆 检测到点击，尝试弹出文件选择器');
-            if (tryAutoPopup()) {
-                clearInterval(checkEditor);
-            }
-        }
-        document.removeEventListener('click', onFirstClick);
-    }
-    document.addEventListener('click', onFirstClick);
-    
-    // 3. 3秒后如果还没弹出，显示提示让用户点击按钮
-    setTimeout(function() {
-        if (!autoPopupTriggered) {
-            console.log('⏰ 自动弹出被阻止，请手动点击按钮选择文件');
-            btn.style.background = '#faad14';
-            btn.textContent = '👆 点击上传第' + getNextChapter() + '章';
-            btn.style.animation = 'pulse 1s infinite';
-        }
-    }, 3000);
     
     fileInput.onchange = function(e) {
         var file = e.target.files[0];
